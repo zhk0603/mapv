@@ -1,7 +1,7 @@
 {
-  "name": "mapv",
-  "version": "2.1.40",
-  "description": "a library of geography visualization",
+  "name": "mapv-ty",
+  "version": "1.0.0",
+  "description": "此分支主要解决一个页面多个layer卡顿的问题",
   "main": "build/mapv.js",
   "scripts": {
     "prepublish": "npm run build && npm run mini",
@@ -15,14 +15,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/huiyan-fe/mapv.git"
+    "url": "git+https://github.com/zhk0603/mapv"
   },
-  "author": "huiyan-fe",
+  "author": "zhk",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/huiyan-fe/mapv/issues"
+    "url": "https://github.com/zhk0603/mapv/issues"
   },
-  "homepage": "https://github.com/huiyan-fe/mapv#readme",
+  "homepage": "https://github.com/zhk0603/mapv#readme",
   "devDependencies": {
     "babel-helpers": "^6.24.1",
     "babel-plugin-transform-remove-console": "^6.9.4",
