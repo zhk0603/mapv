@@ -1,110 +1,101 @@
-/**
- * @author kyle / http://nikai.us/
- */
-
 import BaseLayer from "../BaseLayer";
-import CanvasLayer from "./CanvasLayer";
+import OffScreenCanvasLayer from "./OffScreenCanvasLayer";
 import clear from "../../canvas/clear";
-import DataSet from "../../data/DataSet";
 import TWEEN from "../../utils/Tween";
-import OffScreenLayer from '../off-screen/Layer'
+import DataSet from "../../data/DataSet";
 
 
-class Layer extends BaseLayer{
-
+class Layer extends BaseLayer {
     constructor(map, dataSet, options) {
-
         super(map, dataSet, options);
 
         var self = this;
-        var data = null;
-        options = options || {};
-
-        this.clickEvent = this.clickEvent.bind(this);
-        this.mousemoveEvent = this.mousemoveEvent.bind(this);
-        this.tapEvent = this.tapEvent.bind(this);
 
         self.init(options);
-        self.argCheck(options);
         self.transferToMercator();
 
-        this._innerLayer=[];
-
-        var canvasLayer = this.canvasLayer = new CanvasLayer({
+        this.canvasLayer = new OffScreenCanvasLayer({
             map: map,
             context: this.context,
             paneName: options.paneName,
             mixBlendMode: options.mixBlendMode,
             enableMassClear: options.enableMassClear,
             zIndex: options.zIndex,
-            update: function() {
-                self._canvasUpdate();
+            update: function (time) {
+                self._canvasUpdate(time);
             }
         });
+    }
 
-        
+    init(options) {
 
-        dataSet.on('change', function() {
-            self.transferToMercator();
-            canvasLayer.draw();
-        });
+        var self = this;
+        self.options = options;
+        // this.initDataRange(options);
+        this.context = self.options.context || '2d';
+
+        // if (self.options.zIndex) {
+        //     this.canvasLayer && this.canvasLayer.setZIndex(self.options.zIndex);
+        // }
+
+        // if (self.options.max) {
+        //     this.intensity.setMax(self.options.max);
+        // }
+
+        // if (self.options.min) {
+        //     this.intensity.setMin(self.options.min);
+        // }
+
+        // this.initAnimator();  在主canvas调用子layer _canvasUpdate
+        // this.bindEvent();
 
     }
 
-    clickEvent(e) {
-        var pixel = e.pixel;
-        super.clickEvent(pixel, e);
-    }
 
-    mousemoveEvent(e) {
-        var pixel = e.pixel;
-        super.mousemoveEvent(pixel, e);
-    }
+    initAnimator() {
+        var self = this;
+        var animationOptions = self.options.animation;
 
-    tapEvent(e) {
-        var pixel = e.pixel;
-        super.tapEvent(pixel, e);
-    }
+        if (self.options.draw == 'time' || self.isEnabledTime()) {
 
-    bindEvent(e) {
-        this.unbindEvent();
-        var map = this.map;
-        var timer = 0;
-        var that = this;
-
-        if (this.options.methods) {
-            if (this.options.methods.click) {
-                map.setDefaultCursor("default");
-                map.addEventListener('click', this.clickEvent);
+            if (!animationOptions.stepsRange) {
+                animationOptions.stepsRange = {
+                    start: this.dataSet.getMin('time') || 0,
+                    end: this.dataSet.getMax('time') || 0
+                }
             }
-            if (this.options.methods.mousemove) {
-                map.addEventListener('mousemove', this.mousemoveEvent);
-            }
 
-            if ("ontouchend" in window.document && this.options.methods.tap) {
-                map.addEventListener('touchstart', function(e) {
-                    timer = new Date
-                });
-                map.addEventListener('touchend', function(e) {
-                    if(new Date - timer < 300){
-                        that.tapEvent(e)
-                    }
-                });
-            }
+            this.steps = { step: animationOptions.stepsRange.start };
+            self.animator = new TWEEN.Tween(this.steps)
+                .onUpdate(function () {
+                    self._canvasUpdate(this.step);
+                })
+                .repeat(Infinity);
+
+            this.addAnimatorEvent();
+
+            var duration = animationOptions.duration * 1000 || 5000;
+
+            self.animator.to({ step: animationOptions.stepsRange.end }, duration);
+            self.animator.start();
+
+        } else {
+            self.animator && self.animator.stop();
         }
     }
 
-    unbindEvent(e) {
-        var map = this.map;
+    addAnimatorEvent() { }
 
-        if (this.options.methods) {
-            if (this.options.methods.click) {
-                map.removeEventListener('click', this.clickEvent);
-            }
-            if (this.options.methods.mousemove) {
-                map.removeEventListener('mousemove', this.mousemoveEvent);
-            }
-        }
+    // 将离屏canvas追加到 主canvas上
+    draw(layer, time) {
+        this.canvasLayer.draw(time);
+        let innerContainer = this.canvasLayer.getContainer();
+        let context = layer.getContext();
+        context.drawImage(innerContainer, 0, 0)
+    }
+
+    getContext() {
+        return this.canvasLayer.canvas.getContext(this.context);
     }
 
     // 经纬度左边转换为墨卡托坐标
@@ -116,7 +107,7 @@ class Layer extends BaseLayer{
 
         if (this.options.coordType !== 'bd09mc') {
             var data = dataSet.get();
-            data = dataSet.transferCoordinate(data, function(coordinates) {
+            data = dataSet.transferCoordinate(data, function (coordinates) {
                 if (coordinates[0] < -180 || coordinates[0] > 180 || coordinates[1] < -90 || coordinates[1] > 90) {
                     return coordinates;
                 } else {
@@ -131,11 +122,8 @@ class Layer extends BaseLayer{
         }
     }
 
-    getContext() {
-        return this.canvasLayer.canvas.getContext(this.context);
-    }
-
     _canvasUpdate(time) {
+
         if (!this.canvasLayer) {
             return;
         }
@@ -155,6 +143,7 @@ class Layer extends BaseLayer{
         var context = this.getContext();
 
         if (self.isEnabledTime()) {
+            clear(context);
             if (time === undefined) {
                 clear(context);
                 return;
@@ -189,7 +178,7 @@ class Layer extends BaseLayer{
 
         var dataGetOptions = {
             fromColumn: self.options.coordType == 'bd09mc' ? 'coordinates' : 'coordinates_mercator',
-            transferCoordinate: function(coordinate) {
+            transferCoordinate: function (coordinate) {
                 var x = (coordinate[0] - nwMc.x) / zoomUnit * scale;
                 var y = (nwMc.y - coordinate[1]) / zoomUnit * scale;
                 return [x, y];
@@ -197,7 +186,7 @@ class Layer extends BaseLayer{
         }
 
         if (time !== undefined) {
-            dataGetOptions.filter = function(item) {
+            dataGetOptions.filter = function (item) {
                 var trails = animationOptions.trails || 10;
                 if (time && item.time > (time - trails) && item.time < time) {
                     return true;
@@ -221,7 +210,7 @@ class Layer extends BaseLayer{
         } else {
             data = self.dataSet.get(dataGetOptions);
         }
-        
+
         this.processData(data);
 
         var nwPixel = map.pointToPixel(new BMap.Point(0, 0));
@@ -243,75 +232,7 @@ class Layer extends BaseLayer{
         }
 
         this.drawContext(context, data, self.options, nwPixel);
-
-        // 继续附加 离屏canvas
-        this.drawOffScreenContext(time)
-
-        //console.timeEnd('draw');
-
-        //console.timeEnd('update')
         self.options.updateCallback && self.options.updateCallback(time);
-    }
-
-    drawOffScreenContext(time){
-        this._innerLayer.map(x =>{
-            x.draw(this,time)
-        })
-    }
-
-    init(options) {
-
-        var self = this;
-        self.options = options;
-        this.initDataRange(options);
-        this.context = self.options.context || '2d';
-
-        if (self.options.zIndex) {
-            this.canvasLayer && this.canvasLayer.setZIndex(self.options.zIndex);
-        }
-
-        if (self.options.max) {
-            this.intensity.setMax(self.options.max);
-        }
-
-        if (self.options.min) {
-            this.intensity.setMin(self.options.min);
-        }
-
-        this.initAnimator();
-        this.bindEvent();
-        
-    }
-
-    getZoom() {
-        return this.map.getZoom();
-    }
-
-    addAnimatorEvent() {
-        this.map.addEventListener('movestart', this.animatorMovestartEvent.bind(this));
-        this.map.addEventListener('moveend', this.animatorMoveendEvent.bind(this));
-    }
-
-    show() {
-        this.map.addOverlay(this.canvasLayer);
-    }
-
-    hide() {
-        this.map.removeOverlay(this.canvasLayer);
-    }
-
-    draw() {
-        this.canvasLayer.draw();
-    }
-
-    addLayer(layer){
-        if (!(layer instanceof OffScreenLayer)) {
-            console.log("不是 OffScreenLayer 实例")
-            return;
-        }
-
-        this._innerLayer.push(layer);
-        layer.draw(this);
     }
 }
 

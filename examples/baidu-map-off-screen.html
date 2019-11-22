@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>离屏canvas测试</title>
+
+    <style type="text/css">
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+
+      #map {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="map"></div>
+    <canvas id="canvas"></canvas>
+
+    <script
+      type="text/javascript"
+      src="//apps.bdimg.com/libs/jquery/2.1.1/jquery.min.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="//api.map.baidu.com/api?v=2.0&ak=1XjLLEhZhQNUzd93EjU5nOGQ"
+    ></script>
+    <script type="text/javascript" src="../build/mapv.js"></script>
+
+    <script type="text/javascript">
+      // 百度地图API功能
+      var map = new BMap.Map('map', {
+        enableMapClick: false
+      }) // 创建Map实例
+      map.centerAndZoom(new BMap.Point(113.990963, 22.610125), 12) // 初始化地图,设置中心点坐标和地图级别
+      map.enableScrollWheelZoom(true) // 开启鼠标滚轮缩放
+
+      map.setMapStyle({
+        style: 'midnight'
+      })
+
+      const options = {
+        fillStyle: 'rgba(255, 255, 0, 1)',
+        size: 0.7,
+        bigData: 'Point',
+        draw: 'simple'
+        // context: 'webgl'
+      }
+      const flickerAnimation = {
+        stepsRange: {
+          start: 0,
+          end: 10
+        },
+        trails: 1,
+        duration: 4
+      }
+
+      const dataColor = {
+        data1: 'rgba(48,233,117, .8)', // 绿色数据  rgba(76, 233, 122, .4)
+        data3: 'rgba(255, 250, 250, 0.9)', // 绿闪烁数据
+
+        data2: 'rgba(0,255,255, .8)', // 蓝色数据  rgba(83, 216, 236, .4)  // 没有蓝点数据 todo...
+        data4: 'rgba(255, 250, 250, 0.9)' // 蓝闪烁数据
+      }
+      // const dataArr = this.mapData || []
+
+      const mainContainer = new mapv.baiduMapLayer(map, new mapv.DataSet(), {})
+
+      debugger
+      const starMainContainer = new mapv.baiduMapLayer(
+        map,
+        new mapv.DataSet(),
+        {
+          animation: flickerAnimation
+        }
+      )
+
+      function draw(pageIndex) {
+        if (pageIndex > 20) {
+          return
+        }
+
+        $.get(
+          'https://lhhw.topevery.com/szhw.bigdata.api/api/bigdata/qsbjfg_map?beginDate=2019-11-22&pageSize=10000&pageIndex=' +
+            pageIndex,
+          function(response) {
+            console.log(response)
+
+            const curData = response.data
+
+            if (curData.data1.length == 0) {
+              return
+            }
+
+            const drawMapPoints = (currentData, key, isFlicker) => {
+              if (!currentData[key].length) return
+              var resetData = currentData[key].map((coordinates, index) => {
+                // {"geometry":{"type":"Point","coordinates":[135.132,48.4]}}
+                return {
+                  geometry: {
+                    type: 'Point',
+                    coordinates
+                  },
+                  ...(isFlicker && { time: Math.random() * 10 })
+                }
+              })
+              const dataSet = new mapv.DataSet(resetData)
+              const resOptions = {
+                ...options,
+                fillStyle: dataColor[key]
+              }
+              if (isFlicker) {
+                resOptions.animation = flickerAnimation
+                resOptions.fillStyle = dataColor['data3']
+                resOptions.size = 1.1
+              }
+
+              const mapvPlayer = new mapv.offScreenLayer(
+                map,
+                dataSet,
+                resOptions
+              )
+              if (!isFlicker) {
+                mainContainer.addLayer(mapvPlayer)
+              } else {
+                starMainContainer.addLayer(mapvPlayer)
+              }
+
+              console.log(mapvPlayer)
+            }
+            console.time('map')
+            drawMapPoints(curData, 'data1') // 绿
+            //drawMapPoints(curData, 'data1') // 蓝
+            console.timeEnd('map')
+            drawMapPoints(curData, 'data3', true) // 绿闪
+            //drawMapPoints(curData, 'data1', true) // 蓝闪
+
+            draw(++pageIndex)
+          }
+        )
+      }
+
+      draw(1)
+    </script>
+  </body>
+</html>

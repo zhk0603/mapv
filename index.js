@@ -46,3 +46,5 @@ export { default as DataSet } from "./src/data/DataSet";
 export { default as geojson } from "./src/data/geojson";
 export { default as csv } from "./src/data/csv";
 
+export { default as offScreenLayer } from './src/map/off-screen/Layer'
+

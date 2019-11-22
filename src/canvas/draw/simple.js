@@ -7,7 +7,7 @@ import DataSet from "../../data/DataSet";
 
 export default {
     draw: function (context, dataSet, options) {
-        
+
         var data = dataSet instanceof DataSet ? dataSet.get() : dataSet;
 
         // console.log('xxxx',options)
@@ -36,16 +36,16 @@ export default {
             if (type == 'Point' || type == 'Polygon' || type == 'MultiPolygon') {
 
                 context.fill();
-                
+
                 if (context.lineDash) {
                     context.setLineDash(context.lineDash);
                 }
-                
-                if (item.lineDash) {
+
+                if (item && item.lineDash) {
                     context.setLineDash(item.lineDash);
                 }
 
-                if ((item.strokeStyle || options.strokeStyle) && options.lineWidth) {
+                if ((item && item.strokeStyle || options.strokeStyle) && options.lineWidth) {
                     context.stroke();
                 }
 
@@ -73,7 +73,7 @@ export default {
                 if (context.lineDash) {
                     context.setLineDash(context.lineDash);
                 }
-                
+
                 if (item.lineDash) {
                     context.setLineDash(item.lineDash);
                 }
@@ -82,7 +82,7 @@ export default {
 
                 context.beginPath();
 
-                options.multiPolygonDraw = function() {
+                options.multiPolygonDraw = function () {
                     context.fill();
 
                     if ((item.strokeStyle || options.strokeStyle) && options.lineWidth) {
