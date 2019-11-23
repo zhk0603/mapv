@@ -70,11 +70,8 @@
         data2: 'rgba(0,255,255, .8)', // 蓝色数据  rgba(83, 216, 236, .4)  // 没有蓝点数据 todo...
         data4: 'rgba(255, 250, 250, 0.9)' // 蓝闪烁数据
       }
-      // const dataArr = this.mapData || []
 
       const mainContainer = new mapv.baiduMapLayer(map, new mapv.DataSet(), {})
-
-      debugger
       const starMainContainer = new mapv.baiduMapLayer(
         map,
         new mapv.DataSet(),
@@ -83,72 +80,105 @@
         }
       )
 
-      function draw(pageIndex) {
-        if (pageIndex > 20) {
-          return
-        }
-
-        $.get(
-          'https://lhhw.topevery.com/szhw.bigdata.api/api/bigdata/qsbjfg_map?beginDate=2019-11-22&pageSize=10000&pageIndex=' +
-            pageIndex,
-          function(response) {
-            console.log(response)
-
-            const curData = response.data
-
-            if (curData.data1.length == 0) {
-              return
-            }
-
-            const drawMapPoints = (currentData, key, isFlicker) => {
-              if (!currentData[key].length) return
-              var resetData = currentData[key].map((coordinates, index) => {
-                // {"geometry":{"type":"Point","coordinates":[135.132,48.4]}}
-                return {
-                  geometry: {
-                    type: 'Point',
-                    coordinates
-                  },
-                  ...(isFlicker && { time: Math.random() * 10 })
-                }
-              })
-              const dataSet = new mapv.DataSet(resetData)
-              const resOptions = {
-                ...options,
-                fillStyle: dataColor[key]
-              }
-              if (isFlicker) {
-                resOptions.animation = flickerAnimation
-                resOptions.fillStyle = dataColor['data3']
-                resOptions.size = 1.1
-              }
-
-              const mapvPlayer = new mapv.offScreenLayer(
-                map,
-                dataSet,
-                resOptions
-              )
-              if (!isFlicker) {
-                mainContainer.addLayer(mapvPlayer)
-              } else {
-                starMainContainer.addLayer(mapvPlayer)
-              }
-
-              console.log(mapvPlayer)
-            }
-            console.time('map')
-            drawMapPoints(curData, 'data1') // 绿
-            //drawMapPoints(curData, 'data1') // 蓝
-            console.timeEnd('map')
-            drawMapPoints(curData, 'data3', true) // 绿闪
-            //drawMapPoints(curData, 'data1', true) // 蓝闪
-
-            draw(++pageIndex)
-          }
-        )
+      this.mapvOverlay = []
+      this.mapvOverlay.push(mainContainer)
+      this.mapvOverlay.push(starMainContainer)
+      this.mapParams = {
+        pageSize: 10000,
+        // : 10000,
+        pageIndex: 1,
+        aollow: 3
       }
 
-      draw(1)
+      var drawAction = data => {
+        const curData = data
+
+        const drawMapPoints = (currentData, key, isFlicker) => {
+          // console.error(currentData[key], '查询数据...')
+          if (this.isDestroy) {
+            clearTimeout(timer1)
+            clearTimeout(timer2)
+            return
+          }
+          if (!currentData[key].length) {
+            return
+          }
+          var resetData = currentData[key].map((coordinates, index) => {
+            // {"geometry":{"type":"Point","coordinates":[135.132,48.4]}}
+            return {
+              geometry: {
+                type: 'Point',
+                coordinates
+              },
+              ...(isFlicker && { time: Math.random() * 10 })
+            }
+          })
+          const resOptions = {
+            ...options,
+            fillStyle: dataColor[key]
+          }
+
+          if (isFlicker) {
+            resOptions.animation = flickerAnimation
+            resOptions.fillStyle = dataColor['data3']
+            resOptions.size = 1.1
+          }
+
+          const mapvPlayer = new mapv.offScreenLayer(map, new mapv.DataSet(resetData), resOptions)
+          if (isFlicker) {
+            starMainContainer.addLayer(mapvPlayer)
+          } else {
+            mainContainer.addLayer(mapvPlayer)
+          }
+        }
+        drawMapPoints(curData, 'data1') // 绿
+        drawMapPoints(curData, 'data3', true)
+        if (this.mapParams.pageIndex === 1) {
+        }
+      }
+
+      const QSBJFG_Map = param => {
+        return new Promise(function(r, j) {
+          $.get(
+            'https://lhhw.topevery.com/szhw.bigdata.api/api/bigdata/qsbjfg_map?beginDate=2019-11-23&pageSize=10000&pageIndex=' +
+              param.pageIndex,
+            function(response) {
+              r(response)
+            }
+          )
+        })
+      }
+
+      var fetchDataAction = () => {
+        QSBJFG_Map(this.mapParams).then(res => {
+          if (this.isDestroy) {
+            return
+          }
+          const data = res.data || {}
+
+          this.mapData = data
+
+          if (data.data1.length == 0) {
+            setTimeout(() => {
+              this.isDestroy = true
+
+              this.mapvOverlay.map(v => {
+                console.log('destroy')
+                v.destroy()
+              })
+
+            }, 6000)
+
+            return
+          }
+
+          drawAction(data)
+          this.mapParams.pageIndex++
+          setTimeout(fetchDataAction, 10)
+        })
+      }
+
+      setTimeout(fetchDataAction, 300)
     </script>
   </body>
 </html>

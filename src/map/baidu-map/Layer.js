@@ -10,7 +10,7 @@ import TWEEN from "../../utils/Tween";
 import OffScreenLayer from '../off-screen/Layer'
 
 
-class Layer extends BaseLayer{
+class Layer extends BaseLayer {
 
     constructor(map, dataSet, options) {
 
@@ -28,7 +28,7 @@ class Layer extends BaseLayer{
         self.argCheck(options);
         self.transferToMercator();
 
-        this._innerLayer=[];
+        this._innerLayer = [];
 
         var canvasLayer = this.canvasLayer = new CanvasLayer({
             map: map,
@@ -37,14 +37,14 @@ class Layer extends BaseLayer{
             mixBlendMode: options.mixBlendMode,
             enableMassClear: options.enableMassClear,
             zIndex: options.zIndex,
-            update: function() {
+            update: function () {
                 self._canvasUpdate();
             }
         });
 
-        
 
-        dataSet.on('change', function() {
+
+        dataSet.on('change', function () {
             self.transferToMercator();
             canvasLayer.draw();
         });
@@ -82,11 +82,11 @@ class Layer extends BaseLayer{
             }
 
             if ("ontouchend" in window.document && this.options.methods.tap) {
-                map.addEventListener('touchstart', function(e) {
+                map.addEventListener('touchstart', function (e) {
                     timer = new Date
                 });
-                map.addEventListener('touchend', function(e) {
-                    if(new Date - timer < 300){
+                map.addEventListener('touchend', function (e) {
+                    if (new Date - timer < 300) {
                         that.tapEvent(e)
                     }
                 });
@@ -116,7 +116,7 @@ class Layer extends BaseLayer{
 
         if (this.options.coordType !== 'bd09mc') {
             var data = dataSet.get();
-            data = dataSet.transferCoordinate(data, function(coordinates) {
+            data = dataSet.transferCoordinate(data, function (coordinates) {
                 if (coordinates[0] < -180 || coordinates[0] > 180 || coordinates[1] < -90 || coordinates[1] > 90) {
                     return coordinates;
                 } else {
@@ -139,6 +139,8 @@ class Layer extends BaseLayer{
         if (!this.canvasLayer) {
             return;
         }
+
+        console.log(time, 'time')
 
         var self = this;
 
@@ -189,7 +191,7 @@ class Layer extends BaseLayer{
 
         var dataGetOptions = {
             fromColumn: self.options.coordType == 'bd09mc' ? 'coordinates' : 'coordinates_mercator',
-            transferCoordinate: function(coordinate) {
+            transferCoordinate: function (coordinate) {
                 var x = (coordinate[0] - nwMc.x) / zoomUnit * scale;
                 var y = (nwMc.y - coordinate[1]) / zoomUnit * scale;
                 return [x, y];
@@ -197,7 +199,7 @@ class Layer extends BaseLayer{
         }
 
         if (time !== undefined) {
-            dataGetOptions.filter = function(item) {
+            dataGetOptions.filter = function (item) {
                 var trails = animationOptions.trails || 10;
                 if (time && item.time > (time - trails) && item.time < time) {
                     return true;
@@ -221,7 +223,7 @@ class Layer extends BaseLayer{
         } else {
             data = self.dataSet.get(dataGetOptions);
         }
-        
+
         this.processData(data);
 
         var nwPixel = map.pointToPixel(new BMap.Point(0, 0));
@@ -253,9 +255,9 @@ class Layer extends BaseLayer{
         self.options.updateCallback && self.options.updateCallback(time);
     }
 
-    drawOffScreenContext(time){
-        this._innerLayer.map(x =>{
-            x.draw(this,time)
+    drawOffScreenContext(time) {
+        this._innerLayer.map(x => {
+            x.draw(this, time)
         })
     }
 
@@ -280,7 +282,7 @@ class Layer extends BaseLayer{
 
         this.initAnimator();
         this.bindEvent();
-        
+
     }
 
     getZoom() {
@@ -298,16 +300,23 @@ class Layer extends BaseLayer{
 
     hide() {
         this.map.removeOverlay(this.canvasLayer);
+        this.stopAnimator();
+        this._innerLayer = []
+    }
+
+    stopAnimator() {
+        if (this.animator) {
+            this.animator.stop();
+        }
     }
 
     draw() {
         this.canvasLayer.draw();
     }
 
-    addLayer(layer){
+    addLayer(layer) {
         if (!(layer instanceof OffScreenLayer)) {
-            console.log("不是 OffScreenLayer 实例")
-            return;
+            throw new Error("不是 OffScreenLayer 实例");
         }
 
         this._innerLayer.push(layer);

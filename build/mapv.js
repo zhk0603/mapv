@@ -4,7 +4,7 @@
 	(factory((global.mapv = global.mapv || {})));
 }(this, (function (exports) { 'use strict';
 
-var version = "1.0.0";
+var version = "1.0.1";
 
 /**
  * @author kyle / http://nikai.us/
@@ -5593,60 +5593,11 @@ var Layer$2 = function (_BaseLayer) {
     createClass(Layer, [{
         key: "init",
         value: function init(options) {
-
             var self = this;
             self.options = options;
             // this.initDataRange(options);
             this.context = self.options.context || '2d';
-
-            // if (self.options.zIndex) {
-            //     this.canvasLayer && this.canvasLayer.setZIndex(self.options.zIndex);
-            // }
-
-            // if (self.options.max) {
-            //     this.intensity.setMax(self.options.max);
-            // }
-
-            // if (self.options.min) {
-            //     this.intensity.setMin(self.options.min);
-            // }
-
-            // this.initAnimator();  在主canvas调用子layer _canvasUpdate
-            // this.bindEvent();
         }
-    }, {
-        key: "initAnimator",
-        value: function initAnimator() {
-            var self = this;
-            var animationOptions = self.options.animation;
-
-            if (self.options.draw == 'time' || self.isEnabledTime()) {
-
-                if (!animationOptions.stepsRange) {
-                    animationOptions.stepsRange = {
-                        start: this.dataSet.getMin('time') || 0,
-                        end: this.dataSet.getMax('time') || 0
-                    };
-                }
-
-                this.steps = { step: animationOptions.stepsRange.start };
-                self.animator = new TWEEN.Tween(this.steps).onUpdate(function () {
-                    self._canvasUpdate(this.step);
-                }).repeat(Infinity);
-
-                this.addAnimatorEvent();
-
-                var duration = animationOptions.duration * 1000 || 5000;
-
-                self.animator.to({ step: animationOptions.stepsRange.end }, duration);
-                self.animator.start();
-            } else {
-                self.animator && self.animator.stop();
-            }
-        }
-    }, {
-        key: "addAnimatorEvent",
-        value: function addAnimatorEvent() {}
 
         // 将离屏canvas追加到 主canvas上
 
@@ -6119,6 +6070,15 @@ var Layer = function (_BaseLayer) {
         key: "hide",
         value: function hide() {
             this.map.removeOverlay(this.canvasLayer);
+            this.stopAnimator();
+            this._innerLayer = [];
+        }
+    }, {
+        key: "stopAnimator",
+        value: function stopAnimator() {
+            if (this.animator) {
+                this.animator.stop();
+            }
         }
     }, {
         key: "draw",
@@ -6129,7 +6089,7 @@ var Layer = function (_BaseLayer) {
         key: "addLayer",
         value: function addLayer(layer) {
             if (!(layer instanceof Layer$2)) {
-                return;
+                throw new Error("不是 OffScreenLayer 实例");
             }
 
             this._innerLayer.push(layer);

@@ -1,6 +1,6 @@
 {
   "name": "mapv-ty",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "此分支主要解决一个页面多个layer卡顿的问题",
   "main": "build/mapv.js",
   "scripts": {

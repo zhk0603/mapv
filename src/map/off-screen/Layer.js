@@ -28,63 +28,11 @@ class Layer extends BaseLayer {
     }
 
     init(options) {
-
         var self = this;
         self.options = options;
         // this.initDataRange(options);
         this.context = self.options.context || '2d';
-
-        // if (self.options.zIndex) {
-        //     this.canvasLayer && this.canvasLayer.setZIndex(self.options.zIndex);
-        // }
-
-        // if (self.options.max) {
-        //     this.intensity.setMax(self.options.max);
-        // }
-
-        // if (self.options.min) {
-        //     this.intensity.setMin(self.options.min);
-        // }
-
-        // this.initAnimator();  在主canvas调用子layer _canvasUpdate
-        // this.bindEvent();
-
     }
-
-
-    initAnimator() {
-        var self = this;
-        var animationOptions = self.options.animation;
-
-        if (self.options.draw == 'time' || self.isEnabledTime()) {
-
-            if (!animationOptions.stepsRange) {
-                animationOptions.stepsRange = {
-                    start: this.dataSet.getMin('time') || 0,
-                    end: this.dataSet.getMax('time') || 0
-                }
-            }
-
-            this.steps = { step: animationOptions.stepsRange.start };
-            self.animator = new TWEEN.Tween(this.steps)
-                .onUpdate(function () {
-                    self._canvasUpdate(this.step);
-                })
-                .repeat(Infinity);
-
-            this.addAnimatorEvent();
-
-            var duration = animationOptions.duration * 1000 || 5000;
-
-            self.animator.to({ step: animationOptions.stepsRange.end }, duration);
-            self.animator.start();
-
-        } else {
-            self.animator && self.animator.stop();
-        }
-    }
-
-    addAnimatorEvent() { }
 
     // 将离屏canvas追加到 主canvas上
     draw(layer, time) {
